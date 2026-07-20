@@ -13,7 +13,7 @@ import ApplicationDetails from './ApplicationDetails';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { 
-  Search, Plus, Calendar, Building, Briefcase, 
+  Search, Plus, Calendar, Briefcase, 
   Edit, Trash2, Eye, AlertCircle, FileText, LayoutGrid, List
 } from 'lucide-react';
 
@@ -311,9 +311,35 @@ const Applications = forwardRef<ApplicationsRef, ApplicationsProps>(({ showToast
               {applications.map((app) => (
                 <tr key={app.id}>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
-                      <Building size={16} style={{ color: 'var(--text-secondary)' }} />
-                      {app.companyName}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 600 }}>
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '6px',
+                        backgroundColor: 
+                          app.status === 'Saved' ? 'var(--bg-saved)' :
+                          app.status === 'Applied' ? 'var(--bg-applied)' :
+                          app.status === 'Assessment' ? 'var(--bg-assessment)' :
+                          app.status === 'Interview' ? 'var(--bg-interview)' :
+                          app.status === 'Rejected' ? 'var(--bg-rejected)' :
+                          app.status === 'Offer' ? 'var(--bg-offer)' : 'rgba(0,0,0,0.03)',
+                        color:
+                          app.status === 'Saved' ? 'var(--color-saved)' :
+                          app.status === 'Applied' ? 'var(--color-applied)' :
+                          app.status === 'Assessment' ? 'var(--color-assessment)' :
+                          app.status === 'Interview' ? 'var(--color-interview)' :
+                          app.status === 'Rejected' ? 'var(--color-rejected)' :
+                          app.status === 'Offer' ? 'var(--color-offer)' : 'var(--text-secondary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: '0.9rem',
+                        flexShrink: 0
+                      }}>
+                        {app.companyName.charAt(0).toUpperCase()}
+                      </div>
+                      <span style={{ color: 'var(--text-primary)' }}>{app.companyName}</span>
                     </div>
                   </td>
                   <td>
