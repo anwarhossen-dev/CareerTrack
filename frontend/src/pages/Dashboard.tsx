@@ -10,7 +10,6 @@ import {
 
 interface DashboardProps {
   setView: (view: string) => void;
-  showToast: (message: string, type: 'success' | 'error') => void;
   onAddApplicationClick: () => void;
 }
 

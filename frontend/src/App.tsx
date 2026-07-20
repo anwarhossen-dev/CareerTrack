@@ -8,6 +8,10 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Applications from './pages/Applications';
 import type { ApplicationsRef } from './pages/Applications';
+import AddEditApplication from './pages/AddEditApplication';
+import ApplicationDetails from './pages/ApplicationDetails';
+import { deleteApplication } from './api/applications.api';
+import type { Application } from './types';
 import NotFound from './pages/NotFound';
 import { useAuth } from './hooks/useAuth';
 import { CheckCircle2, AlertCircle, Briefcase } from 'lucide-react';
@@ -21,6 +25,9 @@ const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
   const [currentView, setView] = useState<string>('landing');
   const [toast, setToast] = useState<Toast | null>(null);
+  
+  const [editApp, setEditApp] = useState<Application | null>(null);
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   
   const applicationsRef = useRef<ApplicationsRef>(null);
 
@@ -54,15 +61,10 @@ const AppContent: React.FC = () => {
     }
   }, [user, currentView, loading]);
 
-  // Callback to trigger Add Application Modal from Dashboard
+  // Callback to trigger Add Application Page from Dashboard
   const triggerAddApplication = () => {
-    setView('applications');
-    // Allow React time to switch view and mount/render the Applications component
-    setTimeout(() => {
-      if (applicationsRef.current) {
-        applicationsRef.current.openAddModal();
-      }
-    }, 100);
+    setEditApp(null);
+    setView('add-application');
   };
 
   const renderActiveView = () => {
@@ -88,7 +90,6 @@ const AppContent: React.FC = () => {
         return (
           <Dashboard 
             setView={setView} 
-            showToast={showToast} 
             onAddApplicationClick={triggerAddApplication} 
           />
         );
@@ -97,6 +98,56 @@ const AppContent: React.FC = () => {
           <Applications 
             ref={applicationsRef} 
             showToast={showToast} 
+            setView={setView}
+            setSelectedApp={setSelectedApp}
+            setEditApp={setEditApp}
+          />
+        );
+      case 'add-application':
+        return (
+          <AddEditApplication 
+            setView={setView} 
+            showToast={showToast} 
+            initialData={null}
+            refreshList={() => {
+              if (applicationsRef.current) {
+                applicationsRef.current.refreshList();
+              }
+            }}
+          />
+        );
+      case 'edit-application':
+        return (
+          <AddEditApplication 
+            setView={setView} 
+            showToast={showToast} 
+            initialData={editApp}
+            refreshList={() => {
+              if (applicationsRef.current) {
+                applicationsRef.current.refreshList();
+              }
+            }}
+          />
+        );
+      case 'application-details':
+        return (
+          <ApplicationDetails 
+            application={selectedApp} 
+            setView={setView} 
+            onEdit={(app) => {
+              setEditApp(app);
+              setView('edit-application');
+            }}
+            onDelete={async (app) => {
+              try {
+                await deleteApplication(app.id);
+                showToast('Application deleted successfully', 'success');
+                setView('applications');
+              } catch (err: any) {
+                showToast(err.message || 'Failed to delete application', 'error');
+              }
+            }}
+            showToast={showToast}
           />
         );
       default:
@@ -111,7 +162,6 @@ const AppContent: React.FC = () => {
         <Sidebar 
           setView={setView} 
           activeView={currentView} 
-          onAddClick={triggerAddApplication} 
         />
         <div className="main-content-pane">
           <Header activeView={currentView} />

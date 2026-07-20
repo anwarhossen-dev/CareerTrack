@@ -1,64 +1,49 @@
-import { useEffect, useState, forwardRef, useImperativeHandle } from 'react';
-import type { Application } from '../types';
+import { useEffect, useState, useImperativeHandle, forwardRef } from 'react';
 import { 
-  listApplications, 
-  createApplication, 
-  updateApplication, 
-  deleteApplication 
+  listApplications, deleteApplication 
 } from '../api/applications.api';
+import type { Application } from '../types';
 import StatusBadge from '../components/StatusBadge';
-import ApplicationCard from '../components/ApplicationCard';
-import AddEditApplication from './AddEditApplication';
-import ApplicationDetails from './ApplicationDetails';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { 
-  Search, Plus, Calendar, Briefcase, 
-  Edit, Trash2, Eye, AlertCircle, FileText, LayoutGrid, List
+  Search, Plus, Briefcase, Edit, Trash2, Eye, AlertCircle, FileText, 
+  ChevronLeft, ChevronRight, Globe, Link2, Mail
 } from 'lucide-react';
 
 interface ApplicationsProps {
   showToast: (message: string, type: 'success' | 'error') => void;
+  setView: (view: string) => void;
+  setSelectedApp: (app: Application | null) => void;
+  setEditApp: (app: Application | null) => void;
 }
 
 export interface ApplicationsRef {
-  openAddModal: () => void;
+  refreshList: () => void;
 }
 
-const Applications = forwardRef<ApplicationsRef, ApplicationsProps>(({ showToast }, ref) => {
-  // Data State
+const STATUSES = ['Saved', 'Applied', 'Assessment', 'Interview', 'Rejected', 'Offer'];
+const SOURCES = ['LinkedIn', 'Indeed', 'Glassdoor', 'Direct Site', 'Referral', 'Other'];
+
+const Applications = forwardRef<ApplicationsRef, ApplicationsProps>(({ 
+  showToast, setView, setSelectedApp, setEditApp 
+}, ref) => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filters State
+  // Filter & Search states
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
-  const [sortOrder, setSortOrder] = useState('newest'); // 'newest' | 'oldest' | 'created_asc'
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [sortOrder, setSortOrder] = useState('newest');
 
-  // Modals State
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
-  
-  // Action state
-  const [formSubmitting, setFormSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
-  const SOURCES = ['LinkedIn', 'Bdjobs', 'Indeed', 'Wellfound', 'Facebook', 'Referral', 'Other'];
-  const STATUSES = ['Saved', 'Applied', 'Assessment', 'Interview', 'Rejected', 'Offer'];
-
-  // Expose opening Add Modal externally (e.g. from Dashboard)
-  useImperativeHandle(ref, () => ({
-    openAddModal: () => {
-      setSelectedApp(null);
-      setFormError(null);
-      setIsFormModalOpen(true);
-    }
-  }));
+  // Delete modal state
+  const [appToDelete, setAppToDelete] = useState<Application | null>(null);
 
   const fetchList = async () => {
     try {
@@ -71,143 +56,114 @@ const Applications = forwardRef<ApplicationsRef, ApplicationsProps>(({ showToast
         sort: sortOrder
       });
       setApplications(res.applications);
+      setCurrentPage(1); // Reset to page 1 on filter trigger
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Failed to fetch applications.');
-      showToast(err.message || 'Error fetching data', 'error');
+      setError(err.message || 'Failed to retrieve applications.');
     } finally {
       setLoading(false);
     }
   };
 
+  useImperativeHandle(ref, () => ({
+    refreshList: fetchList
+  }));
+
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
+    const delayDebounce = setTimeout(() => {
       fetchList();
     }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
+    return () => clearTimeout(delayDebounce);
   }, [search, statusFilter, sourceFilter, sortOrder]);
 
-  const handleFormSubmit = async (formData: {
-    companyName: string;
-    jobTitle: string;
-    jobUrl: string;
-    source: string;
-    status: string;
-    applicationDate: string;
-    notes: string;
-  }) => {
-    setFormError(null);
-    setFormSubmitting(true);
-
-    try {
-      if (selectedApp) {
-        // Edit flow
-        await updateApplication(selectedApp.id, formData);
-        showToast('Application updated successfully!', 'success');
-      } else {
-        // Add flow
-        await createApplication(formData);
-        showToast('Application added successfully!', 'success');
-      }
-      setIsFormModalOpen(false);
-      setSelectedApp(null);
-      fetchList();
-    } catch (err: any) {
-      console.error(err);
-      setFormError(err.message || 'Failed to save application.');
-    } finally {
-      setFormSubmitting(false);
-    }
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!selectedApp) return;
-
-    setFormSubmitting(true);
-    try {
-      await deleteApplication(selectedApp.id);
-      showToast('Application deleted successfully!', 'success');
-      setIsDeleteModalOpen(false);
-      setSelectedApp(null);
-      fetchList();
-    } catch (err: any) {
-      console.error(err);
-      showToast(err.message || 'Failed to delete application', 'error');
-    } finally {
-      setFormSubmitting(false);
-    }
+  const handleAddNewClick = () => {
+    setEditApp(null); // Clear edit context
+    setView('add-application');
   };
 
   const handleEditClick = (app: Application) => {
-    setSelectedApp(app);
-    setFormError(null);
-    setIsFormModalOpen(true);
-  };
-
-  const handleDeleteClick = (app: Application) => {
-    setSelectedApp(app);
-    setIsDeleteModalOpen(true);
+    setEditApp(app);
+    setView('edit-application');
   };
 
   const handleViewClick = (app: Application) => {
     setSelectedApp(app);
-    setIsDetailModalOpen(true);
+    setView('application-details');
   };
 
-  const handleExportCSV = () => {
-    if (applications.length === 0) {
-      showToast('No applications to export.', 'error');
-      return;
+  const handleDeleteClick = (app: Application) => {
+    setAppToDelete(app);
+  };
+
+  const confirmDelete = async () => {
+    if (!appToDelete) return;
+    try {
+      await deleteApplication(appToDelete.id);
+      showToast('Application deleted successfully', 'success');
+      setAppToDelete(null);
+      fetchList();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to delete application', 'error');
     }
+  };
 
-    const headers = ['Company Name', 'Job Title', 'Job URL', 'Source', 'Status', 'Application Date', 'Notes', 'Created At'];
-    const rows = applications.map(app => [
-      `"${app.companyName.replace(/"/g, '""')}"`,
-      `"${app.jobTitle.replace(/"/g, '""')}"`,
-      `"${(app.jobUrl || '').replace(/"/g, '""')}"`,
-      `"${app.source}"`,
-      `"${app.status}"`,
-      `"${new Date(app.applicationDate).toLocaleDateString()}"`,
-      `"${(app.notes || '').replace(/"/g, '""')}"`,
-      `"${new Date(app.createdAt).toLocaleString()}"`
-    ]);
+  // Helper for source column icon
+  const getSourceIcon = (src: string) => {
+    switch (src) {
+      case 'LinkedIn':
+        return <Link2 size={14} style={{ color: '#0256d6' }} />;
+      case 'Direct Site':
+      case 'Indeed':
+      case 'Glassdoor':
+        return <Globe size={14} style={{ color: '#475569' }} />;
+      case 'Referral':
+        return <Mail size={14} style={{ color: '#ea580c' }} />;
+      default:
+        return <Briefcase size={14} style={{ color: '#94a3b8' }} />;
+    }
+  };
 
-    const csvContent = 'data:text/csv;charset=utf-8,' 
-      + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `careertrack_applications_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('Spreadsheet downloaded successfully!', 'success');
+  // Pagination slice calculations
+  const totalItems = applications.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = applications.slice(indexOfFirstItem, indexOfLastItem);
+
+  const handlePageChange = (pageNum: number) => {
+    if (pageNum >= 1 && pageNum <= totalPages) {
+      setCurrentPage(pageNum);
+    }
+  };
+
+  // Helper for company initial letter box styling matching status colors
+  const getInitialsStyle = (status: string) => {
+    switch (status) {
+      case 'Saved': return { bg: 'var(--bg-saved)', color: 'var(--color-saved)' };
+      case 'Applied': return { bg: 'var(--bg-applied)', color: 'var(--color-applied)' };
+      case 'Assessment': return { bg: 'var(--bg-assessment)', color: 'var(--color-assessment)' };
+      case 'Interview': return { bg: 'var(--bg-interview)', color: 'var(--color-interview)' };
+      case 'Rejected': return { bg: 'var(--bg-rejected)', color: 'var(--color-rejected)' };
+      case 'Offer': return { bg: 'var(--bg-offer)', color: 'var(--color-offer)' };
+      default: return { bg: 'rgba(0,0,0,0.03)', color: 'var(--text-secondary)' };
+    }
   };
 
   return (
-    <div className="container page-container animate-fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <h1 style={{ fontSize: '1.8rem' }}>Job Applications</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Track, organize, and update your active applications.</p>
-        </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button onClick={handleExportCSV} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <FileText size={16} />
-            Export CSV
-          </button>
-          <button onClick={() => { setSelectedApp(null); setFormError(null); setIsFormModalOpen(true); }} className="btn btn-primary">
-            <Plus size={18} />
-            Add Application
-          </button>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="glass-card search-filter-panel">
-        <div className="search-input-wrapper">
+    <div className="animate-fade-in" style={{ width: '100%' }}>
+      {/* Search & Filter Toolbar */}
+      <div 
+        className="glass-card" 
+        style={{ 
+          padding: '16px 20px', 
+          marginBottom: '24px',
+          display: 'flex',
+          gap: '16px',
+          alignItems: 'center',
+          flexWrap: 'wrap'
+        }}
+      >
+        <div className="search-input-wrapper" style={{ flex: 1, minWidth: '240px' }}>
           <Search size={18} className="search-icon-left" />
           <input
             type="text"
@@ -215,212 +171,271 @@ const Applications = forwardRef<ApplicationsRef, ApplicationsProps>(({ showToast
             placeholder="Search by company or job title..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            style={{ borderRadius: '8px' }}
           />
         </div>
 
-        <div className="filter-group">
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <select 
-            className="form-select filter-select"
+            className="form-select"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
+            style={{ minWidth: '130px', borderRadius: '8px', padding: '8px 12px', background: '#ffffff', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
           >
-            <option value="">All Statuses</option>
+            <option value="">Status: All</option>
             {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
 
           <select 
-            className="form-select filter-select"
+            className="form-select"
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
+            style={{ minWidth: '130px', borderRadius: '8px', padding: '8px 12px', background: '#ffffff', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
           >
-            <option value="">All Sources</option>
+            <option value="">Source: All</option>
             {SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
 
           <select 
-            className="form-select filter-select"
+            className="form-select"
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value)}
+            style={{ minWidth: '140px', borderRadius: '8px', padding: '8px 12px', background: '#ffffff', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
           >
-            <option value="newest">Applied Date: Newest First</option>
-            <option value="oldest">Applied Date: Oldest First</option>
-            <option value="created_asc">Created Date: Oldest First</option>
+            <option value="newest">Sort: Newest</option>
+            <option value="oldest">Sort: Oldest</option>
+            <option value="created_asc">Sort: Created Date</option>
           </select>
-
-          <div className="view-toggle">
-            <button 
-              className={`view-toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
-              onClick={() => setViewMode('table')}
-              title="Table View"
-            >
-              <List size={18} />
-            </button>
-            <button 
-              className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
-              onClick={() => setViewMode('grid')}
-              title="Grid View"
-            >
-              <LayoutGrid size={18} />
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* Applications Data Render */}
-      {loading && applications.length === 0 ? (
-        <LoadingSpinner fullHeight label="Loading job list..." />
-      ) : error ? (
-        <div className="glass-card" style={{ padding: '32px', textAlign: 'center', borderLeft: '4px solid var(--color-rejected)', maxWidth: '600px', margin: '0 auto' }}>
-          <AlertCircle size={40} style={{ color: 'var(--color-rejected)', marginBottom: '12px' }} />
-          <h3 style={{ marginBottom: '8px' }}>Failed to Load Applications</h3>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '20px' }}>{error}</p>
-          <button onClick={fetchList} className="btn btn-primary">Try Again</button>
-        </div>
-      ) : applications.length === 0 ? (
-        <div className="glass-card empty-state">
-          <div className="empty-state-icon">
-            <FileText size={32} />
+      {/* Main Table Card */}
+      <div className="glass-card" style={{ padding: '24px', width: '100%' }}>
+        {loading && applications.length === 0 ? (
+          <LoadingSpinner fullHeight label="Loading your opportunities..." />
+        ) : error ? (
+          <div style={{ padding: '32px', textAlign: 'center' }}>
+            <AlertCircle size={40} style={{ color: 'var(--color-rejected)', marginBottom: '12px' }} />
+            <h3 style={{ marginBottom: '8px' }}>Failed to retrieve data</h3>
+            <p style={{ color: 'var(--text-secondary)' }}>{error}</p>
           </div>
-          <h3 className="empty-state-title">No applications found</h3>
-          <p className="empty-state-desc">Try resetting your search query or filters, or add a new job tracker entry.</p>
-          {(search || statusFilter || sourceFilter) && (
-            <button 
-              onClick={() => { setSearch(''); setStatusFilter(''); setSourceFilter(''); }} 
-              className="btn btn-secondary"
-              style={{ marginTop: '8px' }}
+        ) : totalItems === 0 ? (
+          <div className="empty-state" style={{ border: 'none', background: 'none', padding: '40px 0' }}>
+            <div className="empty-state-icon" style={{ margin: '0 auto 16px' }}>
+              <FileText size={32} />
+            </div>
+            <h3 className="empty-state-title">No applications found</h3>
+            <p className="empty-state-desc">Start adding new job tracker entries or relax filters.</p>
+          </div>
+        ) : (
+          <>
+            <div className="table-responsive" style={{ border: 'none', background: 'none' }}>
+              <table className="app-table">
+                <thead>
+                  <tr>
+                    <th style={{ background: 'none', paddingLeft: 0, color: 'var(--text-secondary)', fontSize: '0.8rem', letterSpacing: '0.05em' }}>COMPANY NAME</th>
+                    <th style={{ background: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', letterSpacing: '0.05em' }}>JOB TITLE</th>
+                    <th style={{ background: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', letterSpacing: '0.05em' }}>SOURCE</th>
+                    <th style={{ background: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', letterSpacing: '0.05em' }}>DATE APPLIED</th>
+                    <th style={{ background: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', letterSpacing: '0.05em' }}>STATUS</th>
+                    <th style={{ background: 'none', textAlign: 'right', paddingRight: 0, color: 'var(--text-secondary)', fontSize: '0.8rem', letterSpacing: '0.05em' }}>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentItems.map((app) => {
+                    const badgeStyle = getInitialsStyle(app.status);
+
+                    return (
+                      <tr key={app.id}>
+                        <td style={{ paddingLeft: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 600 }}>
+                            <div style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '6px',
+                              backgroundColor: badgeStyle.bg,
+                              color: badgeStyle.color,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 700,
+                              fontSize: '0.9rem',
+                              flexShrink: 0
+                            }}>
+                              {app.companyName.charAt(0).toUpperCase()}
+                            </div>
+                            <span style={{ color: 'var(--text-primary)' }}>{app.companyName}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span style={{ color: 'var(--text-secondary)' }}>{app.jobTitle}</span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                            {getSourceIcon(app.source)}
+                            <span>{app.source}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                            {new Date(app.applicationDate).toLocaleDateString(undefined, { 
+                              month: 'short', 
+                              day: '2-digit', 
+                              year: 'numeric' 
+                            })}
+                          </span>
+                        </td>
+                        <td>
+                          <StatusBadge status={app.status} />
+                        </td>
+                        <td style={{ textAlign: 'right', paddingRight: 0 }}>
+                          <div className="app-table-actions" style={{ justifyContent: 'flex-end', gap: '8px' }}>
+                            <button 
+                              onClick={() => handleViewClick(app)} 
+                              style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(0,0,0,0.02)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                              title="View Details"
+                            >
+                              <Eye size={13} />
+                            </button>
+                            <button 
+                              onClick={() => handleEditClick(app)} 
+                              style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(2, 86, 214, 0.05)', border: '1px solid rgba(2, 86, 214, 0.1)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                              title="Edit"
+                            >
+                              <Edit size={13} />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteClick(app)} 
+                              style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(220, 38, 38, 0.05)', border: '1px solid rgba(220, 38, 38, 0.1)', color: 'var(--color-rejected)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                              title="Delete"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Footer */}
+            <div 
+              style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                marginTop: '20px', 
+                borderTop: '1px solid var(--border-color)', 
+                paddingTop: '16px' 
+              }}
             >
-              Clear Filters
-            </button>
-          )}
-        </div>
-      ) : viewMode === 'table' ? (
-        /* Table View */
-        <div className="table-responsive animate-fade-in">
-          <table className="app-table">
-            <thead>
-              <tr>
-                <th>Company</th>
-                <th>Job Title</th>
-                <th>Status</th>
-                <th>Source</th>
-                <th>Applied Date</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {applications.map((app) => (
-                <tr key={app.id}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 600 }}>
-                      <div style={{
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Showing <strong>{indexOfFirstItem + 1}</strong> to <strong>{Math.min(indexOfLastItem, totalItems)}</strong> of <strong>{totalItems}</strong> applications
+              </span>
+
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <button 
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    background: currentPage === 1 ? 'rgba(0,0,0,0.02)' : '#ffffff',
+                    color: currentPage === 1 ? 'var(--text-muted)' : 'var(--text-secondary)',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                {Array.from({ length: totalPages }).map((_, idx) => {
+                  const pNum = idx + 1;
+                  const isActive = currentPage === pNum;
+                  return (
+                    <button
+                      key={pNum}
+                      onClick={() => handlePageChange(pNum)}
+                      style={{
                         width: '32px',
                         height: '32px',
                         borderRadius: '6px',
-                        backgroundColor: 
-                          app.status === 'Saved' ? 'var(--bg-saved)' :
-                          app.status === 'Applied' ? 'var(--bg-applied)' :
-                          app.status === 'Assessment' ? 'var(--bg-assessment)' :
-                          app.status === 'Interview' ? 'var(--bg-interview)' :
-                          app.status === 'Rejected' ? 'var(--bg-rejected)' :
-                          app.status === 'Offer' ? 'var(--bg-offer)' : 'rgba(0,0,0,0.03)',
-                        color:
-                          app.status === 'Saved' ? 'var(--color-saved)' :
-                          app.status === 'Applied' ? 'var(--color-applied)' :
-                          app.status === 'Assessment' ? 'var(--color-assessment)' :
-                          app.status === 'Interview' ? 'var(--color-interview)' :
-                          app.status === 'Rejected' ? 'var(--color-rejected)' :
-                          app.status === 'Offer' ? 'var(--color-offer)' : 'var(--text-secondary)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 700,
-                        fontSize: '0.9rem',
-                        flexShrink: 0
-                      }}>
-                        {app.companyName.charAt(0).toUpperCase()}
-                      </div>
-                      <span style={{ color: 'var(--text-primary)' }}>{app.companyName}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Briefcase size={16} style={{ color: 'var(--text-muted)' }} />
-                      {app.jobTitle}
-                    </div>
-                  </td>
-                  <td>
-                    <StatusBadge status={app.status} />
-                  </td>
-                  <td>{app.source}</td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                      <Calendar size={14} />
-                      {new Date(app.applicationDate).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <div className="app-table-actions" style={{ justifyContent: 'flex-end' }}>
-                      <button onClick={() => handleViewClick(app)} className="btn btn-secondary" style={{ padding: '6px 10px' }} title="View details">
-                        <Eye size={15} />
-                      </button>
-                      <button onClick={() => handleEditClick(app)} className="btn btn-secondary" style={{ padding: '6px 10px', color: 'var(--primary)' }} title="Edit">
-                        <Edit size={15} />
-                      </button>
-                      <button onClick={() => handleDeleteClick(app)} className="btn btn-danger" style={{ padding: '6px 10px' }} title="Delete">
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        /* Grid View */
-        <div className="app-cards-grid animate-fade-in">
-          {applications.map((app) => (
-            <ApplicationCard
-              key={app.id}
-              application={app}
-              onView={handleViewClick}
-              onEdit={handleEditClick}
-              onDelete={handleDeleteClick}
-            />
-          ))}
-        </div>
+                        border: isActive ? 'none' : '1px solid var(--border-color)',
+                        background: isActive ? 'var(--primary)' : '#ffffff',
+                        color: isActive ? '#ffffff' : 'var(--text-secondary)',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {pNum}
+                    </button>
+                  );
+                })}
+
+                <button 
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    background: currentPage === totalPages ? 'rgba(0,0,0,0.02)' : '#ffffff',
+                    color: currentPage === totalPages ? 'var(--text-muted)' : 'var(--text-secondary)',
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Floating Action Button (FAB) (matching mockup style) */}
+      <button 
+        onClick={handleAddNewClick}
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          width: '56px',
+          height: '56px',
+          borderRadius: '50%',
+          backgroundColor: 'var(--primary)',
+          color: '#ffffff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 4px 14px rgba(2, 86, 214, 0.4)',
+          border: 'none',
+          cursor: 'pointer',
+          zIndex: 99,
+          transition: 'transform 0.2s ease'
+        }}
+        className="card-scale"
+        title="Track New Opportunity"
+      >
+        <Plus size={24} />
+      </button>
+
+      {/* Delete Confirmation Modal */}
+      {appToDelete && (
+        <DeleteConfirmModal
+          isOpen={!!appToDelete}
+          onClose={() => setAppToDelete(null)}
+          onConfirm={confirmDelete}
+          companyName={appToDelete.companyName}
+          jobTitle={appToDelete.jobTitle}
+          submitting={false}
+        />
       )}
-
-      {/* ================= REFACTORED MODALS ================= */}
-
-      {/* 1. Add / Edit Application Form Modal */}
-      <AddEditApplication
-        isOpen={isFormModalOpen}
-        onClose={() => { setIsFormModalOpen(false); setSelectedApp(null); }}
-        onSubmit={handleFormSubmit}
-        initialData={selectedApp}
-        submitting={formSubmitting}
-        error={formError}
-      />
-
-      {/* 2. Details Modal */}
-      <ApplicationDetails
-        isOpen={isDetailModalOpen}
-        onClose={() => { setIsDetailModalOpen(false); setSelectedApp(null); }}
-        application={selectedApp}
-        onEdit={handleEditClick}
-        onDelete={handleDeleteClick}
-      />
-
-      {/* 3. Delete Confirmation Modal */}
-      <DeleteConfirmModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => { setIsDeleteModalOpen(false); setSelectedApp(null); }}
-        onConfirm={handleConfirmDelete}
-        companyName={selectedApp?.companyName || ''}
-        jobTitle={selectedApp?.jobTitle || ''}
-        submitting={formSubmitting}
-      />
     </div>
   );
 });
