@@ -335,7 +335,7 @@ const Applications = forwardRef<ApplicationsRef, ApplicationsProps>(({
                 Showing <strong>{indexOfFirstItem + 1}</strong> to <strong>{Math.min(indexOfLastItem, totalItems)}</strong> of <strong>{totalItems}</strong> applications
               </span>
 
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginRight: '64px' }}>
                 <button 
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
