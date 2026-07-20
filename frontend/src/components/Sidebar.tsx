@@ -7,10 +7,9 @@ import {
 interface SidebarProps {
   setView: (view: string) => void;
   activeView: string;
-  onAddClick: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ setView, activeView, onAddClick }) => {
+const Sidebar: React.FC<SidebarProps> = ({ setView, activeView }) => {
   const { user, logout } = useAuth();
 
   const handleLogout = () => {
@@ -19,11 +18,7 @@ const Sidebar: React.FC<SidebarProps> = ({ setView, activeView, onAddClick }) =>
   };
 
   const handleAddClick = () => {
-    setView('applications');
-    // Allow state to switch before opening the modal
-    setTimeout(() => {
-      onAddClick();
-    }, 100);
+    setView('add-application');
   };
 
   // Only render sidebar if user is authenticated

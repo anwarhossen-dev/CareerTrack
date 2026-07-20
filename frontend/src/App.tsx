@@ -191,18 +191,20 @@ const AppContent: React.FC = () => {
   // Unauthenticated Guest Layout (Landing, Login, Register)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--bg-main)' }}>
-      <header style={{ height: '70px', backgroundColor: 'var(--bg-surface)', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', padding: '0 24px', zIndex: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Briefcase size={26} style={{ color: 'var(--primary)' }} />
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>
-            CareerTrack<span style={{ fontWeight: 400, opacity: 0.8 }}>Lite</span>
-          </h2>
-        </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
-          <button onClick={() => setView('login')} className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: '0.9rem' }}>Log In</button>
-          <button onClick={() => setView('register')} className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '0.9rem' }}>Sign Up</button>
-        </div>
-      </header>
+      {currentView !== 'landing' && (
+        <header style={{ height: '70px', backgroundColor: 'var(--bg-surface)', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', padding: '0 24px', zIndex: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Briefcase size={26} style={{ color: 'var(--primary)' }} />
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>
+              CareerTrack<span style={{ fontWeight: 400, opacity: 0.8 }}>Lite</span>
+            </h2>
+          </div>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
+            <button onClick={() => setView('login')} className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: '0.9rem' }}>Log In</button>
+            <button onClick={() => setView('register')} className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '0.9rem' }}>Sign Up</button>
+          </div>
+        </header>
+      )}
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {renderActiveView()}
