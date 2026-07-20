@@ -1,15 +1,8 @@
-import { Router, Response } from 'express';
-import prisma from '../db';
-import { authenticateJWT } from '../middleware/auth';
-import { AuthenticatedRequest } from '../types';
+import { Response, NextFunction } from 'express';
+import prisma from '../config/db';
+import { AuthenticatedRequest } from '../middleware/auth.middleware';
 
-const router = Router();
-
-// Apply JWT authentication
-router.use(authenticateJWT);
-
-// GET /api/dashboard/stats
-router.get('/stats', async (req: AuthenticatedRequest, res: Response) => {
+export const getDashboardStats = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const userId = req.user?.id;
 
   if (!userId) {
@@ -17,12 +10,12 @@ router.get('/stats', async (req: AuthenticatedRequest, res: Response) => {
   }
 
   try {
-    // 1. Fetch total count of user's applications
+    // Fetch total count of user's applications
     const totalApplications = await prisma.application.count({
       where: { userId },
     });
 
-    // 2. Fetch counts grouped by status
+    // Fetch counts grouped by status
     const statusCounts = await prisma.application.groupBy({
       by: ['status'],
       where: { userId },
@@ -31,7 +24,7 @@ router.get('/stats', async (req: AuthenticatedRequest, res: Response) => {
       },
     });
 
-    // Convert group by results to key-value pairs for easier usage
+    // Initialize metrics dictionary
     const stats: { [key: string]: number } = {
       Saved: 0,
       Applied: 0,
@@ -47,7 +40,7 @@ router.get('/stats', async (req: AuthenticatedRequest, res: Response) => {
       }
     });
 
-    // 3. Fetch 5 recently added applications
+    // Fetch 5 recently added applications
     const recentApplications = await prisma.application.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -60,9 +53,6 @@ router.get('/stats', async (req: AuthenticatedRequest, res: Response) => {
       recentApplications,
     });
   } catch (error) {
-    console.error('Fetch dashboard stats error:', error);
-    return res.status(500).json({ error: 'Failed to retrieve dashboard statistics.' });
+    next(error);
   }
-});
-
-export default router;
+};

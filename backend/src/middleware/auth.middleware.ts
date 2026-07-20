@@ -1,6 +1,14 @@
-import { Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { AuthenticatedRequest, UserPayload } from '../types';
+import { Request, Response, NextFunction } from 'express';
+import { verifyToken } from '../utils/jwt';
+
+export interface AuthenticatedRequest extends Request {
+  // Overrides user field explicitly for typescript convenience in routing handlers
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
 
 export const authenticateJWT = (
   req: AuthenticatedRequest,
@@ -18,10 +26,8 @@ export const authenticateJWT = (
     return res.status(401).json({ error: 'Access token format is invalid. Use Bearer <token>.' });
   }
 
-  const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_for_local_dev';
-
   try {
-    const decoded = jwt.verify(token, jwtSecret) as UserPayload;
+    const decoded = verifyToken(token);
     req.user = decoded;
     next();
   } catch (error) {

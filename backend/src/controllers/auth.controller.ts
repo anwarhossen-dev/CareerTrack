@@ -1,15 +1,10 @@
-import { Router, Response } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import prisma from '../db';
-import { authenticateJWT } from '../middleware/auth';
-import { AuthenticatedRequest } from '../types';
+import { Request, Response, NextFunction } from 'express';
+import prisma from '../config/db';
+import { hashPassword, comparePassword } from '../utils/hash';
+import { generateToken } from '../utils/jwt';
+import { AuthenticatedRequest } from '../middleware/auth.middleware';
 
-const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_local_dev';
-
-// POST /api/auth/register
-router.post('/register', async (req, res) => {
+export const register = async (req: Request, res: Response, next: NextFunction) => {
   const { name, email, password } = req.body;
 
   if (!name || !email || !password) {
@@ -21,29 +16,26 @@ router.post('/register', async (req, res) => {
   }
 
   try {
+    const emailLower = email.toLowerCase().trim();
     const existingUser = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email: emailLower },
     });
 
     if (existingUser) {
       return res.status(400).json({ error: 'An account with this email already exists.' });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await hashPassword(password);
 
     const user = await prisma.user.create({
       data: {
-        name,
-        email: email.toLowerCase(),
+        name: name.trim(),
+        email: emailLower,
         passwordHash,
       },
     });
 
-    const token = jwt.sign(
-      { id: user.id, name: user.name, email: user.email },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+    const token = generateToken({ id: user.id, name: user.name, email: user.email });
 
     return res.status(201).json({
       message: 'Registration successful',
@@ -55,13 +47,11 @@ router.post('/register', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Registration error:', error);
-    return res.status(500).json({ error: 'An error occurred during registration. Please try again.' });
+    next(error);
   }
-});
+};
 
-// POST /api/auth/login
-router.post('/login', async (req, res) => {
+export const login = async (req: Request, res: Response, next: NextFunction) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -69,25 +59,22 @@ router.post('/login', async (req, res) => {
   }
 
   try {
+    const emailLower = email.toLowerCase().trim();
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email: emailLower },
     });
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    const isPasswordValid = await comparePassword(password, user.passwordHash);
 
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    const token = jwt.sign(
-      { id: user.id, name: user.name, email: user.email },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+    const token = generateToken({ id: user.id, name: user.name, email: user.email });
 
     return res.json({
       message: 'Login successful',
@@ -99,13 +86,11 @@ router.post('/login', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Login error:', error);
-    return res.status(500).json({ error: 'An error occurred during login. Please try again.' });
+    next(error);
   }
-});
+};
 
-// GET /api/auth/me
-router.get('/me', authenticateJWT, async (req: AuthenticatedRequest, res: Response) => {
+export const getMe = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
@@ -127,9 +112,6 @@ router.get('/me', authenticateJWT, async (req: AuthenticatedRequest, res: Respon
 
     return res.json({ user });
   } catch (error) {
-    console.error('Fetch me error:', error);
-    return res.status(500).json({ error: 'Failed to retrieve user profile.' });
+    next(error);
   }
-});
-
-export default router;
+};

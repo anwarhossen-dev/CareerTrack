@@ -1,18 +1,11 @@
-import { Router, Response } from 'express';
-import prisma from '../db';
-import { authenticateJWT } from '../middleware/auth';
-import { AuthenticatedRequest } from '../types';
-
-const router = Router();
-
-// Apply JWT authentication to all routes in this file
-router.use(authenticateJWT);
+import { Response, NextFunction } from 'express';
+import prisma from '../config/db';
+import { AuthenticatedRequest } from '../middleware/auth.middleware';
 
 const VALID_SOURCES = ['LinkedIn', 'Bdjobs', 'Indeed', 'Wellfound', 'Facebook', 'Referral', 'Other'];
 const VALID_STATUSES = ['Saved', 'Applied', 'Assessment', 'Interview', 'Rejected', 'Offer'];
 
-// POST /api/applications - Create a new job application
-router.post('/', async (req: AuthenticatedRequest, res: Response) => {
+export const createApplication = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const { companyName, jobTitle, jobUrl, source, status, applicationDate, notes } = req.body;
   const userId = req.user?.id;
 
@@ -56,13 +49,11 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
       application,
     });
   } catch (error) {
-    console.error('Create application error:', error);
-    return res.status(500).json({ error: 'Failed to create job application.' });
+    next(error);
   }
-});
+};
 
-// GET /api/applications - List the authenticated user's applications with search, filter, and sort
-router.get('/', async (req: AuthenticatedRequest, res: Response) => {
+export const listApplications = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const userId = req.user?.id;
 
   if (!userId) {
@@ -71,12 +62,11 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
 
   const { search, status, source, sort } = req.query;
 
-  // Build prisma filter conditions
+  // Build filter conditions
   const whereCondition: any = {
     userId,
   };
 
-  // Search by companyName or jobTitle
   if (search) {
     const searchString = String(search).trim();
     whereCondition.OR = [
@@ -85,17 +75,14 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
     ];
   }
 
-  // Filter by status
   if (status && VALID_STATUSES.includes(String(status))) {
     whereCondition.status = String(status);
   }
 
-  // Filter by source
   if (source && VALID_SOURCES.includes(String(source))) {
     whereCondition.source = String(source);
   }
 
-  // Define sort order (default is newest first)
   let orderByCondition: any = { createdAt: 'desc' };
 
   if (sort === 'oldest') {
@@ -114,13 +101,11 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
 
     return res.json({ applications });
   } catch (error) {
-    console.error('List applications error:', error);
-    return res.status(500).json({ error: 'Failed to retrieve job applications.' });
+    next(error);
   }
-});
+};
 
-// GET /api/applications/:id - Get a single job application (with ownership check)
-router.get('/:id', async (req: AuthenticatedRequest, res: Response) => {
+export const getApplicationById = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const userId = req.user?.id;
   const { id } = req.params;
 
@@ -143,13 +128,11 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response) => {
 
     return res.json({ application });
   } catch (error) {
-    console.error('Fetch application error:', error);
-    return res.status(500).json({ error: 'Failed to retrieve job application details.' });
+    next(error);
   }
-});
+};
 
-// PATCH /api/applications/:id - Update an existing job application (with ownership check)
-router.patch('/:id', async (req: AuthenticatedRequest, res: Response) => {
+export const updateApplication = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const userId = req.user?.id;
   const { id } = req.params;
   const { companyName, jobTitle, jobUrl, source, status, applicationDate, notes } = req.body;
@@ -159,7 +142,6 @@ router.patch('/:id', async (req: AuthenticatedRequest, res: Response) => {
   }
 
   try {
-    // Check ownership first
     const existing = await prisma.application.findUnique({
       where: { id },
     });
@@ -172,7 +154,6 @@ router.patch('/:id', async (req: AuthenticatedRequest, res: Response) => {
       return res.status(403).json({ error: 'Access denied. You do not own this application.' });
     }
 
-    // Build update payload dynamically
     const updateData: any = {};
 
     if (companyName !== undefined) {
@@ -228,13 +209,11 @@ router.patch('/:id', async (req: AuthenticatedRequest, res: Response) => {
       application: updatedApplication,
     });
   } catch (error) {
-    console.error('Update application error:', error);
-    return res.status(500).json({ error: 'Failed to update job application.' });
+    next(error);
   }
-});
+};
 
-// DELETE /api/applications/:id - Delete a job application (with ownership check)
-router.delete('/:id', async (req: AuthenticatedRequest, res: Response) => {
+export const deleteApplication = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const userId = req.user?.id;
   const { id } = req.params;
 
@@ -243,7 +222,6 @@ router.delete('/:id', async (req: AuthenticatedRequest, res: Response) => {
   }
 
   try {
-    // Check ownership first
     const existing = await prisma.application.findUnique({
       where: { id },
     });
@@ -262,9 +240,6 @@ router.delete('/:id', async (req: AuthenticatedRequest, res: Response) => {
 
     return res.json({ message: 'Application deleted successfully' });
   } catch (error) {
-    console.error('Delete application error:', error);
-    return res.status(500).json({ error: 'Failed to delete job application.' });
+    next(error);
   }
-});
-
-export default router;
+};
