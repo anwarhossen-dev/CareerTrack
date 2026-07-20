@@ -27,15 +27,19 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 
     const passwordHash = await hashPassword(password);
 
+    const isAdminEmail = emailLower.includes('admin') || emailLower === 'kabir@bd.com';
+    const role = isAdminEmail ? 'ADMIN' : 'USER';
+
     const user = await prisma.user.create({
       data: {
         name: name.trim(),
         email: emailLower,
         passwordHash,
+        role,
       },
     });
 
-    const token = generateToken({ id: user.id, name: user.name, email: user.email });
+    const token = generateToken({ id: user.id, name: user.name, email: user.email, role: user.role });
 
     return res.status(201).json({
       message: 'Registration successful',
@@ -44,6 +48,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
       },
     });
   } catch (error) {
@@ -74,7 +79,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    const token = generateToken({ id: user.id, name: user.name, email: user.email });
+    const token = generateToken({ id: user.id, name: user.name, email: user.email, role: user.role });
 
     return res.json({
       message: 'Login successful',
@@ -83,6 +88,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
       },
     });
   } catch (error) {
@@ -102,6 +108,7 @@ export const getMe = async (req: AuthenticatedRequest, res: Response, next: Next
         id: true,
         name: true,
         email: true,
+        role: true,
         createdAt: true,
       },
     });

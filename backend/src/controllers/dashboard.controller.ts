@@ -56,3 +56,61 @@ export const getDashboardStats = async (req: AuthenticatedRequest, res: Response
     next(error);
   }
 };
+
+export const getAdminStats = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  if (!req.user || req.user.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Access denied. Administrator privileges required.' });
+  }
+
+  try {
+    const totalUsers = await prisma.user.count();
+    const totalApplications = await prisma.application.count();
+
+    const statusCounts = await prisma.application.groupBy({
+      by: ['status'],
+      _count: {
+        status: true,
+      },
+    });
+
+    const statusStats: { [key: string]: number } = {
+      Saved: 0,
+      Applied: 0,
+      Assessment: 0,
+      Interview: 0,
+      Rejected: 0,
+      Offer: 0,
+    };
+
+    statusCounts.forEach((group) => {
+      if (group.status in statusStats) {
+        statusStats[group.status] = group._count.status;
+      }
+    });
+
+    const usersList = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        _count: {
+          select: {
+            applications: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return res.json({
+      totalUsers,
+      totalApplications,
+      statusStats,
+      usersList,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

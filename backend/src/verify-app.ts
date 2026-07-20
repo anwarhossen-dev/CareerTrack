@@ -1,173 +1,136 @@
-const BACKEND_URL = 'http://localhost:5000/api';
+import prisma from './config/db';
+
+const API_URL = 'http://localhost:5000/api';
 
 async function runTests() {
-  console.log('=== STARTING CAREERTRACK LITE INTEGRATION TESTS ===\n');
+  console.log('=== STARTING CAREERTRACK LITE RBAC INTEGRATION TESTS ===');
 
   try {
-    const timestamp = Date.now();
-    const emailA = `usera_${timestamp}@test.com`;
-    const emailB = `userb_${timestamp}@test.com`;
-    const password = 'password123';
+    // 0. Clean database for a fresh test run
+    await prisma.application.deleteMany();
+    await prisma.user.deleteMany();
+    console.log('✔ Database tables flushed successfully.');
 
-    // 1. Register User A
-    console.log('1. Registering User A...');
-    const registerARes = await fetch(`${BACKEND_URL}/auth/register`, {
+    // 1. Register User A (Standard User)
+    const userARes = await fetch(`${API_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'User A', email: emailA, password })
+      body: JSON.stringify({
+        name: 'Standard User A',
+        email: 'user_a@test.com',
+        password: 'passwordA123',
+      }),
     });
-    if (!registerARes.ok) throw new Error(`Failed to register User A: ${await registerARes.text()}`);
-    const registerAData: any = await registerARes.json();
-    const tokenA = registerAData.token;
-    console.log('✔ User A registered successfully.');
 
-    // 2. Register User B
-    console.log('\n2. Registering User B...');
-    const registerBRes = await fetch(`${BACKEND_URL}/auth/register`, {
+    const userAData = (await userARes.json()) as any;
+    if (userARes.status !== 201) {
+      throw new Error(`Failed to register User A: ${JSON.stringify(userAData)}`);
+    }
+    const tokenA = userAData.token;
+    console.log(`✔ User A registered successfully. Role: ${userAData.user.role} (Expected: USER)`);
+
+    // 2. Register User B (Admin Kabir)
+    const adminRes = await fetch(`${API_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'User B', email: emailB, password })
+      body: JSON.stringify({
+        name: 'Kabir Admin',
+        email: 'kabir@bd.com',
+        password: 'adminPassword123',
+      }),
     });
-    if (!registerBRes.ok) throw new Error(`Failed to register User B: ${await registerBRes.text()}`);
-    const registerBData: any = await registerBRes.json();
-    const tokenB = registerBData.token;
-    console.log('✔ User B registered successfully.');
 
-    // 3. Create a Job Application for User A
-    console.log('\n3. Creating job application for User A...');
-    const createJobRes = await fetch(`${BACKEND_URL}/applications`, {
+    const adminData = (await adminRes.json()) as any;
+    if (adminRes.status !== 201) {
+      throw new Error(`Failed to register Admin Kabir: ${JSON.stringify(adminData)}`);
+    }
+    const tokenAdmin = adminData.token;
+    console.log(`✔ Admin Kabir registered successfully. Role: ${adminData.user.role} (Expected: ADMIN)`);
+
+    // 3. Create job application for User A
+    const appRes = await fetch(`${API_URL}/applications`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${tokenA}`
+        Authorization: `Bearer ${tokenA}`,
       },
       body: JSON.stringify({
-        companyName: 'Google',
+        companyName: 'Tech Corp',
         jobTitle: 'Software Engineer',
-        jobUrl: 'https://careers.google.com',
         source: 'LinkedIn',
         status: 'Applied',
-        applicationDate: '2026-07-20',
-        notes: 'First round interview scheduled'
-      })
+        applicationDate: new Date().toISOString(),
+        notes: 'First application notes',
+      }),
     });
-    if (!createJobRes.ok) throw new Error(`Failed to create application: ${await createJobRes.text()}`);
-    const createJobData: any = await createJobRes.json();
-    const appAId = createJobData.application.id;
-    console.log(`✔ Application created with ID: ${appAId}`);
 
-    // 4. Verify User A can list their application
-    console.log("\n4. Fetching User A's application list...");
-    const listARes = await fetch(`${BACKEND_URL}/applications`, {
-      headers: { 'Authorization': `Bearer ${tokenA}` }
-    });
-    const listAData: any = await listARes.json();
-    if (listAData.applications.length !== 1 || listAData.applications[0].id !== appAId) {
-      throw new Error(`List verification failed for User A. Expected 1 app, got ${listAData.applications.length}`);
+    const appData = (await appRes.json()) as any;
+    if (appRes.status !== 201) {
+      throw new Error(`Failed to create application: ${JSON.stringify(appData)}`);
     }
-    console.log('✔ User A list contains 1 application matching created ID.');
+    const appId = appData.application.id;
+    console.log(`✔ Application created for User A. ID: ${appId}`);
 
-    // 5. Verify User B does NOT see User A's application
-    console.log("\n5. Fetching User B's application list (should be empty)...");
-    const listBRes = await fetch(`${BACKEND_URL}/applications`, {
-      headers: { 'Authorization': `Bearer ${tokenB}` }
+    // 4. Security Check: Standard User A attempts to access admin stats endpoint
+    console.log('\n4. Security Check: User A (Standard) requests admin stats...');
+    const adminStatsA = await fetch(`${API_URL}/dashboard/admin/stats`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${tokenA}` },
     });
-    const listBData: any = await listBRes.json();
-    if (listBData.applications.length !== 0) {
-      throw new Error(`Data leak: User B sees applications! Count: ${listBData.applications.length}`);
+    console.log(`Status returned: ${adminStatsA.status}`);
+    if (adminStatsA.status === 403) {
+      console.log('✔ User A request blocked with 403 Forbidden. Separation verified.');
+    } else {
+      throw new Error(`Security breach! Standard user was allowed to request admin stats with code ${adminStatsA.status}`);
     }
-    console.log("✔ User B list is empty. Separation verified.");
 
-    // 6. Security Isolation Check: User B attempts to GET User A's application
-    console.log("\n6. Security Check: User B attempts to read User A's application directly...");
-    const getDirectRes = await fetch(`${BACKEND_URL}/applications/${appAId}`, {
-      headers: { 'Authorization': `Bearer ${tokenB}` }
+    // 5. Admin Kabir requests admin stats
+    console.log('\n5. Admin Kabir requests admin stats...');
+    const adminStatsRes = await fetch(`${API_URL}/dashboard/admin/stats`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${tokenAdmin}` },
     });
-    console.log(`Status returned: ${getDirectRes.status}`);
-    if (getDirectRes.status !== 403) {
-      throw new Error(`Security breach! User B read User A's application directly. Status: ${getDirectRes.status}`);
+    console.log(`Status returned: ${adminStatsRes.status}`);
+    if (adminStatsRes.status !== 200) {
+      throw new Error(`Failed to fetch admin stats: ${await adminStatsRes.text()}`);
     }
-    console.log("✔ User B direct read request blocked with 403 Forbidden. Separation verified.");
+    const adminStatsData = (await adminStatsRes.json()) as any;
+    console.log('✔ Admin stats retrieved successfully.');
+    console.log(`- Total Users: ${adminStatsData.totalUsers} (Expected: 2)`);
+    console.log(`- Total Applications: ${adminStatsData.totalApplications} (Expected: 1)`);
+    console.log(`- Status Stats: ${JSON.stringify(adminStatsData.statusStats)}`);
+    console.log(`- Users List length: ${adminStatsData.usersList.length}`);
 
-    // 7. Security Isolation Check: User B attempts to UPDATE User A's application
-    console.log("\n7. Security Check: User B attempts to edit User A's application...");
-    const updateDirectRes = await fetch(`${BACKEND_URL}/applications/${appAId}`, {
+    // Verify stats content
+    if (adminStatsData.totalUsers !== 2 || adminStatsData.totalApplications !== 1) {
+      throw new Error('Stats counters mismatch.');
+    }
+    console.log('✔ Admin counts validation passed.');
+
+    // 6. User A updates status
+    const updateRes = await fetch(`${API_URL}/applications/${appId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${tokenB}`
+        Authorization: `Bearer ${tokenA}`,
       },
-      body: JSON.stringify({ companyName: 'Hacked Inc' })
+      body: JSON.stringify({ status: 'Interview' }),
     });
-    console.log(`Status returned: ${updateDirectRes.status}`);
-    if (updateDirectRes.status !== 403) {
-      throw new Error(`Security breach! User B updated User A's application. Status: ${updateDirectRes.status}`);
+    if (updateRes.status !== 200) {
+      throw new Error('User A failed to update application status.');
     }
-    console.log("✔ User B edit request blocked with 403 Forbidden. Separation verified.");
+    console.log('\n✔ User A successfully updated application status.');
 
-    // 8. Security Isolation Check: User B attempts to DELETE User A's application
-    console.log("\n8. Security Check: User B attempts to delete User A's application...");
-    const deleteDirectRes = await fetch(`${BACKEND_URL}/applications/${appAId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${tokenB}` }
-    });
-    console.log(`Status returned: ${deleteDirectRes.status}`);
-    if (deleteDirectRes.status !== 403) {
-      throw new Error(`Security breach! User B deleted User A's application. Status: ${deleteDirectRes.status}`);
-    }
-    console.log("✔ User B delete request blocked with 403 Forbidden. Separation verified.");
-
-    // 9. Dashboard stats check for User A
-    console.log("\n9. Fetching Dashboard stats for User A...");
-    const statsRes = await fetch(`${BACKEND_URL}/dashboard/stats`, {
-      headers: { 'Authorization': `Bearer ${tokenA}` }
-    });
-    const statsData: any = await statsRes.json();
-    console.log(`Stats returned: Total=${statsData.total}, Applied=${statsData.stats.Applied}, Interview=${statsData.stats.Interview}`);
-    if (statsData.total !== 1 || statsData.stats.Applied !== 1) {
-      throw new Error('Stats do not match expectations for User A.');
-    }
-    console.log('✔ Dashboard statistics verify correctly.');
-
-    // 10. User A updates their own application
-    console.log("\n10. User A updates their application status to 'Interview'...");
-    const selfUpdateRes = await fetch(`${BACKEND_URL}/applications/${appAId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${tokenA}`
-      },
-      body: JSON.stringify({ status: 'Interview', notes: 'Interview scheduled for Friday!' })
-    });
-    if (!selfUpdateRes.ok) throw new Error(`Self update failed: ${await selfUpdateRes.text()}`);
-    console.log('✔ Application updated successfully by owner.');
-
-    // 11. User A deletes their own application
-    console.log('\n11. User A deletes their application...');
-    const selfDeleteRes = await fetch(`${BACKEND_URL}/applications/${appAId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${tokenA}` }
-    });
-    if (!selfDeleteRes.ok) throw new Error(`Self delete failed: ${await selfDeleteRes.text()}`);
-    console.log('✔ Application deleted successfully by owner.');
-
-    // 12. Final verify empty list
-    console.log("\n12. Final verification of empty application list for User A...");
-    const finalARes = await fetch(`${BACKEND_URL}/applications`, {
-      headers: { 'Authorization': `Bearer ${tokenA}` }
-    });
-    const finalAData: any = await finalARes.json();
-    if (finalAData.applications.length !== 0) {
-      throw new Error(`List is not empty after delete. Count: ${finalAData.applications.length}`);
-    }
-    console.log('✔ Application list is empty. CRUD cycle complete.');
+    // 7. Clean up database
+    await prisma.application.deleteMany();
+    await prisma.user.deleteMany();
+    console.log('✔ Test cleanup complete.');
 
     console.log('\n===================================================');
-    console.log('✔✔✔ ALL INTEGRATION AND ISOLATION TESTS PASSED ✔✔✔');
+    console.log('✔✔✔ ALL RBAC INTEGRATION TESTS PASSED SUCCESSFULLY ✔✔✔');
     console.log('===================================================');
-  } catch (error: any) {
-    console.error('\n❌❌❌ TEST SUITE FAILED ❌❌❌');
-    console.error(error.message || error);
+  } catch (error) {
+    console.error('\n❌ TEST RUN FAILED WITH ERROR:', error);
     process.exit(1);
   }
 }

@@ -7,6 +7,7 @@ export interface AuthenticatedRequest extends Request {
     id: string;
     name: string;
     email: string;
+    role: string;
   };
 }
 
@@ -33,4 +34,15 @@ export const authenticateJWT = (
   } catch (error) {
     return res.status(401).json({ error: 'Access token is invalid or has expired.' });
   }
+};
+
+export const requireAdmin = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  if (!req.user || req.user.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Access denied. Administrator privileges required.' });
+  }
+  next();
 };

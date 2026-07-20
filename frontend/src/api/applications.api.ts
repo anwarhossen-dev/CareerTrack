@@ -1,5 +1,5 @@
 import axiosInstance from './axios';
-import type { Application, DashboardData } from '../types';
+import type { Application, DashboardData, AdminDashboardData } from '../types';
 
 interface ListParams {
   search?: string;
@@ -54,5 +54,10 @@ export const deleteApplication = async (id: string): Promise<MessageResponse> =>
 
 export const fetchDashboardStats = async (): Promise<DashboardData> => {
   const response = await axiosInstance.get<DashboardData>('/dashboard/stats');
+  return response.data;
+};
+
+export const fetchAdminStats = async (): Promise<AdminDashboardData> => {
+  const response = await axiosInstance.get<AdminDashboardData>('/dashboard/admin/stats');
   return response.data;
 };

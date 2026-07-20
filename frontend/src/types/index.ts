@@ -2,6 +2,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  role: string; // "USER" | "ADMIN"
   createdAt?: string;
 }
 
@@ -32,4 +33,22 @@ export interface DashboardData {
   total: number;
   stats: Stats;
   recentApplications: Application[];
+}
+
+export interface SystemUserSummary {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  createdAt: string;
+  _count: {
+    applications: number;
+  };
+}
+
+export interface AdminDashboardData {
+  totalUsers: number;
+  totalApplications: number;
+  statusStats: Stats;
+  usersList: SystemUserSummary[];
 }
