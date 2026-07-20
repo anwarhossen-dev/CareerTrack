@@ -23,7 +23,7 @@ export interface ApplicationsRef {
 }
 
 const STATUSES = ['Saved', 'Applied', 'Assessment', 'Interview', 'Rejected', 'Offer'];
-const SOURCES = ['LinkedIn', 'Indeed', 'Glassdoor', 'Direct Site', 'Referral', 'Other'];
+const SOURCES = ['LinkedIn', 'Indeed', 'Glassdoor', 'Direct Site', 'Referral', 'Bdjobs', 'Wellfound', 'Facebook', 'Other'];
 
 const Applications = forwardRef<ApplicationsRef, ApplicationsProps>(({ 
   showToast, setView, setSelectedApp, setEditApp 

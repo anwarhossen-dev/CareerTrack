@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 import prisma from '../config/db';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 
-const VALID_SOURCES = ['LinkedIn', 'Bdjobs', 'Indeed', 'Wellfound', 'Facebook', 'Referral', 'Other'];
+const VALID_SOURCES = ['LinkedIn', 'Indeed', 'Glassdoor', 'Direct Site', 'Referral', 'Bdjobs', 'Wellfound', 'Facebook', 'Other'];
 const VALID_STATUSES = ['Saved', 'Applied', 'Assessment', 'Interview', 'Rejected', 'Offer'];
 
 export const createApplication = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

@@ -29,7 +29,7 @@ const AddEditApplication: React.FC<AddEditApplicationProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const SOURCES = ['LinkedIn', 'Indeed', 'Glassdoor', 'Direct Site', 'Referral', 'Other'];
+  const SOURCES = ['LinkedIn', 'Indeed', 'Glassdoor', 'Direct Site', 'Referral', 'Bdjobs', 'Wellfound', 'Facebook', 'Other'];
   const STATUSES = ['Saved', 'Applied', 'Assessment', 'Interview', 'Rejected', 'Offer'];
 
   // Fill form if editing
