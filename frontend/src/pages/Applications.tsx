@@ -180,7 +180,7 @@ const Applications = forwardRef<ApplicationsRef, ApplicationsProps>(({
             className="form-select"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            style={{ minWidth: '130px', borderRadius: '8px', padding: '8px 12px', background: '#ffffff', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
+            style={{ width: 'auto', minWidth: '130px', borderRadius: '8px', padding: '8px 12px', background: '#ffffff', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
           >
             <option value="">Status: All</option>
             {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -190,7 +190,7 @@ const Applications = forwardRef<ApplicationsRef, ApplicationsProps>(({
             className="form-select"
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
-            style={{ minWidth: '130px', borderRadius: '8px', padding: '8px 12px', background: '#ffffff', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
+            style={{ width: 'auto', minWidth: '130px', borderRadius: '8px', padding: '8px 12px', background: '#ffffff', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
           >
             <option value="">Source: All</option>
             {SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -200,7 +200,7 @@ const Applications = forwardRef<ApplicationsRef, ApplicationsProps>(({
             className="form-select"
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value)}
-            style={{ minWidth: '140px', borderRadius: '8px', padding: '8px 12px', background: '#ffffff', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
+            style={{ width: 'auto', minWidth: '140px', borderRadius: '8px', padding: '8px 12px', background: '#ffffff', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
           >
             <option value="newest">Sort: Newest</option>
             <option value="oldest">Sort: Oldest</option>
