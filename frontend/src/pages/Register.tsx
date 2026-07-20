@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
+import { registerUser } from '../api/auth.api';
 import { AlertCircle, UserPlus, Loader2 } from 'lucide-react';
 
 interface RegisterProps {
@@ -16,13 +17,11 @@ const Register: React.FC<RegisterProps> = ({ setView, showToast }) => {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const API_BASE_URL = 'http://localhost:5000/api';
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    // Client-side validations
+    // Client validations
     if (!name || !email || !password || !confirmPassword) {
       setError('Please fill in all fields.');
       return;
@@ -41,20 +40,7 @@ const Register: React.FC<RegisterProps> = ({ setView, showToast }) => {
     setSubmitting(true);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, email, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Registration failed. Please try again.');
-      }
-
+      const data = await registerUser(name, email, password);
       login(data.token, data.user);
       showToast('Account created successfully!', 'success');
       setView('dashboard');

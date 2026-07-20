@@ -1,28 +1,21 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
+import type { User } from '../types';
+import { fetchCurrentUser } from '../api/auth.api';
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-}
-
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
-  apiFetch: (endpoint: string, options?: RequestInit) => Promise<any>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-
-  const API_BASE_URL = 'http://localhost:5000/api';
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -30,22 +23,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (savedToken) {
         setToken(savedToken);
         try {
-          const res = await fetch(`${API_BASE_URL}/auth/me`, {
-            headers: {
-              'Authorization': `Bearer ${savedToken}`,
-            },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setUser(data.user);
-          } else {
-            // Token expired or invalid
-            localStorage.removeItem('careertrack_token');
-            setToken(null);
-            setUser(null);
-          }
+          const data = await fetchCurrentUser();
+          setUser(data.user);
         } catch (err) {
-          console.error('Auth initialization error:', err);
+          console.error('Session verification failed on mount:', err);
+          // Purge session on verify failure
+          localStorage.removeItem('careertrack_token');
+          setToken(null);
+          setUser(null);
         }
       }
       setLoading(false);
@@ -66,43 +51,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
-  const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
-    };
-
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers,
-    });
-
-    if (response.status === 401) {
-      // Automatic logout on unauthorized session
-      logout();
-      throw new Error('Session expired. Please log in again.');
-    }
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-    }
-
-    return response.json();
-  };
-
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, apiFetch }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };

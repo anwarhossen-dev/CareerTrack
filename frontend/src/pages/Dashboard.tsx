@@ -1,36 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
+import { fetchDashboardStats } from '../api/applications.api';
+import type { DashboardData } from '../types';
+import StatCard from '../components/StatCard';
+import StatusBadge from '../components/StatusBadge';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { 
-  Plus, Loader2, AlertCircle, FileText, 
-  Calendar, Sparkles, Building, Briefcase 
+  Plus, AlertCircle, FileText, Calendar, Sparkles, Building, Briefcase 
 } from 'lucide-react';
-
-interface Application {
-  id: string;
-  companyName: string;
-  jobTitle: string;
-  jobUrl: string | null;
-  source: string;
-  status: string;
-  applicationDate: string;
-  notes: string | null;
-  createdAt: string;
-}
-
-interface Stats {
-  Saved: number;
-  Applied: number;
-  Assessment: number;
-  Interview: number;
-  Rejected: number;
-  Offer: number;
-}
-
-interface DashboardData {
-  total: number;
-  stats: Stats;
-  recentApplications: Application[];
-}
 
 interface DashboardProps {
   setView: (view: string) => void;
@@ -39,16 +16,16 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ setView, showToast, onAddApplicationClick }) => {
-  const { apiFetch } = useAuth();
+  const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchDashboardData = async () => {
+  const fetchStats = async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await apiFetch('/dashboard/stats');
+      const res = await fetchDashboardStats();
       setData(res);
     } catch (err: any) {
       console.error(err);
@@ -60,30 +37,11 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, showToast, onAddApplicat
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    fetchStats();
   }, []);
 
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'Saved': return 'badge badge-saved';
-      case 'Applied': return 'badge badge-applied';
-      case 'Assessment': return 'badge badge-assessment';
-      case 'Interview': return 'badge badge-interview';
-      case 'Rejected': return 'badge badge-rejected';
-      case 'Offer': return 'badge badge-offer';
-      default: return 'badge';
-    }
-  };
-
   if (loading) {
-    return (
-      <div className="container page-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <div style={{ textAlign: 'center' }}>
-          <Loader2 size={40} className="animate-spin" style={{ color: 'var(--primary)', animation: 'spin 1s linear infinite', marginBottom: '12px', display: 'inline-block' }} />
-          <p style={{ color: 'var(--text-secondary)' }}>Loading your dashboard...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner fullHeight label="Loading dashboard metrics..." />;
   }
 
   if (error) {
@@ -93,7 +51,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, showToast, onAddApplicat
           <AlertCircle size={40} style={{ color: 'var(--color-rejected)', marginBottom: '12px' }} />
           <h2 style={{ marginBottom: '8px' }}>Dashboard Error</h2>
           <p style={{ color: 'var(--text-secondary)', marginBottom: '20px' }}>{error}</p>
-          <button onClick={fetchDashboardData} className="btn btn-primary">Try Again</button>
+          <button onClick={fetchStats} className="btn btn-primary">Try Again</button>
         </div>
       </div>
     );
@@ -107,7 +65,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, showToast, onAddApplicat
     <div className="container page-container animate-fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '1.8rem' }}>Welcome to CareerTrack</h1>
+          <h1 style={{ fontSize: '1.8rem' }}>Welcome, {user?.name}!</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Here is an overview of your job search progress.</p>
         </div>
         <button onClick={onAddApplicationClick} className="btn btn-primary">
@@ -116,36 +74,15 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, showToast, onAddApplicat
         </button>
       </div>
 
-      {/* Stats Cards Grid */}
+      {/* Stats Cards Grid using StatCard */}
       <div className="dashboard-grid">
-        <div className="glass-card stat-card stat-total card-scale">
-          <div className="stat-label">Total</div>
-          <div className="stat-val">{total}</div>
-        </div>
-        <div className="glass-card stat-card stat-saved card-scale">
-          <div className="stat-label">Saved</div>
-          <div className="stat-val" style={{ color: 'var(--color-saved)' }}>{stats.Saved}</div>
-        </div>
-        <div className="glass-card stat-card stat-applied card-scale">
-          <div className="stat-label">Applied</div>
-          <div className="stat-val" style={{ color: 'var(--color-applied)' }}>{stats.Applied}</div>
-        </div>
-        <div className="glass-card stat-card stat-assessment card-scale">
-          <div className="stat-label">Assessments</div>
-          <div className="stat-val" style={{ color: 'var(--color-assessment)' }}>{stats.Assessment}</div>
-        </div>
-        <div className="glass-card stat-card stat-interview card-scale">
-          <div className="stat-label">Interviews</div>
-          <div className="stat-val" style={{ color: 'var(--color-interview)' }}>{stats.Interview}</div>
-        </div>
-        <div className="glass-card stat-card stat-rejected card-scale">
-          <div className="stat-label">Rejections</div>
-          <div className="stat-val" style={{ color: 'var(--color-rejected)' }}>{stats.Rejected}</div>
-        </div>
-        <div className="glass-card stat-card stat-offer card-scale">
-          <div className="stat-label">Offers</div>
-          <div className="stat-val" style={{ color: 'var(--color-offer)' }}>{stats.Offer}</div>
-        </div>
+        <StatCard label="Total" value={total} type="total" />
+        <StatCard label="Saved" value={stats.Saved} type="saved" />
+        <StatCard label="Applied" value={stats.Applied} type="applied" />
+        <StatCard label="Assessments" value={stats.Assessment} type="assessment" />
+        <StatCard label="Interviews" value={stats.Interview} type="interview" />
+        <StatCard label="Rejections" value={stats.Rejected} type="rejected" />
+        <StatCard label="Offers" value={stats.Offer} type="offer" />
       </div>
 
       {/* Recent Applications Section */}
@@ -196,7 +133,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, showToast, onAddApplicat
                       </div>
                     </td>
                     <td>
-                      <span className={getStatusBadgeClass(app.status)}>{app.status}</span>
+                      <StatusBadge status={app.status} />
                     </td>
                     <td>{app.source}</td>
                     <td>
@@ -221,13 +158,6 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, showToast, onAddApplicat
           </div>
         )}
       </div>
-
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 };

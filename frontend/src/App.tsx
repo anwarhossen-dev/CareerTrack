@@ -8,7 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Applications from './pages/Applications';
 import type { ApplicationsRef } from './pages/Applications';
 import NotFound from './pages/NotFound';
-import { useAuth } from './context/AuthContext';
+import { useAuth } from './hooks/useAuth';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface Toast {

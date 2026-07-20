@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
+import { loginUser } from '../api/auth.api';
 import { AlertCircle, LogIn, Loader2 } from 'lucide-react';
 
 interface LoginProps {
@@ -14,8 +15,6 @@ const Login: React.FC<LoginProps> = ({ setView, showToast }) => {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const API_BASE_URL = 'http://localhost:5000/api';
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -28,20 +27,7 @@ const Login: React.FC<LoginProps> = ({ setView, showToast }) => {
     setSubmitting(true);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Login failed. Please check your credentials.');
-      }
-
+      const data = await loginUser(email, password);
       login(data.token, data.user);
       showToast('Logged in successfully!', 'success');
       setView('dashboard');
