@@ -4,18 +4,13 @@ const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="footer">
-      <div className="container footer-content">
+    <footer className="footer" style={{ padding: '20px 0', borderTop: '1px solid var(--border-color)', background: 'var(--bg-surface)', width: '100%', marginTop: 'auto', zIndex: 10 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
         <div>
           &copy; {currentYear} <strong>CareerTrack Lite</strong>. All rights reserved.
         </div>
-        <div className="footer-developer">
-          Developed by: <span style={{ color: 'var(--primary)' }}>MD. Anwar hossen</span> 
-          <span style={{ margin: '0 8px', opacity: 0.5 }}>|</span> 
-          Student ID: <span style={{ color: 'var(--secondary)' }}>22-48211-3</span>
-        </div>
-        <div style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '4px' }}>
-          Build a deployable job application tracker in 3 days
+        <div>
+          Developed by: <strong>MD. Anwar hossen</strong> | Student ID: <strong style={{ color: 'var(--primary)' }}>22-48211-3</strong>
         </div>
       </div>
     </footer>

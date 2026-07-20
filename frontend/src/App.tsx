@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar';
+import Header from './components/Header';
 import Footer from './components/Footer';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -9,7 +10,7 @@ import Applications from './pages/Applications';
 import type { ApplicationsRef } from './pages/Applications';
 import NotFound from './pages/NotFound';
 import { useAuth } from './hooks/useAuth';
-import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Briefcase } from 'lucide-react';
 
 interface Toast {
   message: string;
@@ -103,10 +104,56 @@ const AppContent: React.FC = () => {
     }
   };
 
+  // Authenticated Dashboard Layout
+  if (user) {
+    return (
+      <div className="app-container">
+        <Sidebar 
+          setView={setView} 
+          activeView={currentView} 
+          onAddClick={triggerAddApplication} 
+        />
+        <div className="main-content-pane">
+          <Header activeView={currentView} />
+          <main style={{ flex: 1, padding: '24px 32px 40px', display: 'flex', flexDirection: 'column' }}>
+            {renderActiveView()}
+          </main>
+          <Footer />
+        </div>
+        
+        {/* Floating Toast Notification */}
+        {toast && (
+          <div className="toast-container">
+            <div className={`toast toast-${toast.type}`}>
+              {toast.type === 'success' ? (
+                <CheckCircle2 size={20} style={{ color: 'var(--color-offer)' }} />
+              ) : (
+                <AlertCircle size={20} style={{ color: 'var(--color-rejected)' }} />
+              )}
+              <span>{toast.message}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Unauthenticated Guest Layout (Landing, Login, Register)
   return (
-    <div className="app-layout">
-      <Navbar currentView={currentView} setView={setView} />
-      
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--bg-main)' }}>
+      <header style={{ height: '70px', backgroundColor: 'var(--bg-surface)', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', padding: '0 24px', zIndex: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Briefcase size={26} style={{ color: 'var(--primary)' }} />
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>
+            CareerTrack<span style={{ fontWeight: 400, opacity: 0.8 }}>Lite</span>
+          </h2>
+        </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
+          <button onClick={() => setView('login')} className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: '0.9rem' }}>Log In</button>
+          <button onClick={() => setView('register')} className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '0.9rem' }}>Sign Up</button>
+        </div>
+      </header>
+
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {renderActiveView()}
       </main>
