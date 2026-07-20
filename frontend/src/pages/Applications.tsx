@@ -155,6 +155,37 @@ const Applications = forwardRef<ApplicationsRef, ApplicationsProps>(({ showToast
     setIsDetailModalOpen(true);
   };
 
+  const handleExportCSV = () => {
+    if (applications.length === 0) {
+      showToast('No applications to export.', 'error');
+      return;
+    }
+
+    const headers = ['Company Name', 'Job Title', 'Job URL', 'Source', 'Status', 'Application Date', 'Notes', 'Created At'];
+    const rows = applications.map(app => [
+      `"${app.companyName.replace(/"/g, '""')}"`,
+      `"${app.jobTitle.replace(/"/g, '""')}"`,
+      `"${(app.jobUrl || '').replace(/"/g, '""')}"`,
+      `"${app.source}"`,
+      `"${app.status}"`,
+      `"${new Date(app.applicationDate).toLocaleDateString()}"`,
+      `"${(app.notes || '').replace(/"/g, '""')}"`,
+      `"${new Date(app.createdAt).toLocaleString()}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' 
+      + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `careertrack_applications_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Spreadsheet downloaded successfully!', 'success');
+  };
+
   return (
     <div className="container page-container animate-fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
@@ -162,10 +193,16 @@ const Applications = forwardRef<ApplicationsRef, ApplicationsProps>(({ showToast
           <h1 style={{ fontSize: '1.8rem' }}>Job Applications</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Track, organize, and update your active applications.</p>
         </div>
-        <button onClick={() => { setSelectedApp(null); setFormError(null); setIsFormModalOpen(true); }} className="btn btn-primary">
-          <Plus size={18} />
-          Add Application
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button onClick={handleExportCSV} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <FileText size={16} />
+            Export CSV
+          </button>
+          <button onClick={() => { setSelectedApp(null); setFormError(null); setIsFormModalOpen(true); }} className="btn btn-primary">
+            <Plus size={18} />
+            Add Application
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}

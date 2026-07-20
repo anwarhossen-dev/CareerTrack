@@ -172,6 +172,62 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, showToast, onAddApplicat
                 <StatCard label="Offers" value={personalData?.stats.Offer || 0} type="offer" />
               </div>
 
+              {/* Sleek Visual Progress Funnel Bar */}
+              <div className="glass-card" style={{ padding: '20px', marginBottom: '32px', marginTop: '24px' }}>
+                <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Sparkles size={18} style={{ color: 'var(--primary)' }} />
+                  Job Search Conversion Funnel
+                </h3>
+                <div style={{ display: 'flex', height: '12px', borderRadius: '6px', overflow: 'hidden', background: '#1e293b', marginBottom: '16px' }}>
+                  {(() => {
+                    const saved = personalData?.stats.Saved || 0;
+                    const applied = personalData?.stats.Applied || 0;
+                    const assessment = personalData?.stats.Assessment || 0;
+                    const interview = personalData?.stats.Interview || 0;
+                    const offer = personalData?.stats.Offer || 0;
+                    const rejected = personalData?.stats.Rejected || 0;
+                    const totalCount = saved + applied + assessment + interview + offer + rejected || 1;
+
+                    return (
+                      <>
+                        <div style={{ width: `${(saved / totalCount) * 100}%`, background: 'var(--color-saved)', transition: 'width 0.5s ease' }} title={`Saved: ${saved}`} />
+                        <div style={{ width: `${(applied / totalCount) * 100}%`, background: 'var(--color-applied)', transition: 'width 0.5s ease' }} title={`Applied: ${applied}`} />
+                        <div style={{ width: `${(assessment / totalCount) * 100}%`, background: 'var(--color-assessment)', transition: 'width 0.5s ease' }} title={`Assessment: ${assessment}`} />
+                        <div style={{ width: `${(interview / totalCount) * 100}%`, background: 'var(--color-interview)', transition: 'width 0.5s ease' }} title={`Interview: ${interview}`} />
+                        <div style={{ width: `${(offer / totalCount) * 100}%`, background: 'var(--color-offer)', transition: 'width 0.5s ease' }} title={`Offer: ${offer}`} />
+                        <div style={{ width: `${(rejected / totalCount) * 100}%`, background: 'var(--color-rejected)', transition: 'width 0.5s ease' }} title={`Rejected: ${rejected}`} />
+                      </>
+                    );
+                  })()}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: 'var(--color-saved)' }} />
+                    Saved ({personalData?.stats.Saved || 0})
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: 'var(--color-applied)' }} />
+                    Applied ({personalData?.stats.Applied || 0})
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: 'var(--color-assessment)' }} />
+                    Assessment ({personalData?.stats.Assessment || 0})
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: 'var(--color-interview)' }} />
+                    Interview ({personalData?.stats.Interview || 0})
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: 'var(--color-offer)' }} />
+                    Offer ({personalData?.stats.Offer || 0})
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: 'var(--color-rejected)' }} />
+                    Rejected ({personalData?.stats.Rejected || 0})
+                  </div>
+                </div>
+              </div>
+
               {/* Recent Entries */}
               <div style={{ marginTop: '16px' }}>
                 <h2 style={{ fontSize: '1.3rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
