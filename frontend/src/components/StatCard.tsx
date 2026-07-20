@@ -1,4 +1,7 @@
 import React from 'react';
+import { 
+  Bookmark, Send, ClipboardCheck, Calendar, XCircle, Trophy, Layers 
+} from 'lucide-react';
 
 interface StatCardProps {
   label: string;
@@ -7,6 +10,20 @@ interface StatCardProps {
 }
 
 const StatCard: React.FC<StatCardProps> = ({ label, value, type }) => {
+  const getIcon = () => {
+    const size = 20;
+    switch (type) {
+      case 'total': return <Layers size={size} style={{ color: 'var(--text-primary)' }} />;
+      case 'saved': return <Bookmark size={size} style={{ color: 'var(--color-saved)' }} />;
+      case 'applied': return <Send size={size} style={{ color: 'var(--color-applied)' }} />;
+      case 'assessment': return <ClipboardCheck size={size} style={{ color: 'var(--color-assessment)' }} />;
+      case 'interview': return <Calendar size={size} style={{ color: 'var(--color-interview)' }} />;
+      case 'rejected': return <XCircle size={size} style={{ color: 'var(--color-rejected)' }} />;
+      case 'offer': return <Trophy size={size} style={{ color: 'var(--color-offer)' }} />;
+      default: return null;
+    }
+  };
+
   const getCardClass = () => {
     switch (type) {
       case 'total': return 'glass-card stat-card stat-total card-scale';
@@ -33,9 +50,24 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, type }) => {
   };
 
   return (
-    <div className={getCardClass()}>
+    <div className={getCardClass()} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+      <div 
+        style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          width: '38px', 
+          height: '38px', 
+          borderRadius: '50%', 
+          background: 'rgba(255, 255, 255, 0.03)', 
+          marginBottom: '8px',
+          border: '1px solid rgba(255, 255, 255, 0.05)'
+        }}
+      >
+        {getIcon()}
+      </div>
       <div className="stat-label">{label}</div>
-      <div className="stat-val" style={{ color: getValueColor() }}>
+      <div className="stat-val" style={{ color: getValueColor(), fontSize: '1.75rem', fontWeight: 800 }}>
         {value}
       </div>
     </div>
