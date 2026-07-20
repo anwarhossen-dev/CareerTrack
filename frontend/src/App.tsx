@@ -10,6 +10,7 @@ import Applications from './pages/Applications';
 import type { ApplicationsRef } from './pages/Applications';
 import AddEditApplication from './pages/AddEditApplication';
 import ApplicationDetails from './pages/ApplicationDetails';
+import Profile from './pages/Profile';
 import { deleteApplication } from './api/applications.api';
 import type { Application } from './types';
 import NotFound from './pages/NotFound';
@@ -150,6 +151,8 @@ const AppContent: React.FC = () => {
             showToast={showToast}
           />
         );
+      case 'profile':
+        return <Profile setView={setView} />;
       default:
         return <NotFound setView={setView} />;
     }
