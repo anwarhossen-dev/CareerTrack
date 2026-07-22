@@ -1,11 +1,21 @@
 import axios from 'axios';
 
-const defaultBaseUrl = import.meta.env.PROD 
-  ? 'https://careertrackbackend.vercel.app/api' 
-  : 'http://localhost:5000/api';
+const getSanitizedApiUrl = (): string => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl && envUrl.trim()) {
+    let cleanUrl = envUrl.trim().replace(/\/+$/, '');
+    if (!cleanUrl.endsWith('/api')) {
+      cleanUrl += '/api';
+    }
+    return cleanUrl;
+  }
+  return import.meta.env.PROD 
+    ? 'https://careertrackbackend.vercel.app/api' 
+    : 'http://localhost:5000/api';
+};
 
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || defaultBaseUrl,
+  baseURL: getSanitizedApiUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
