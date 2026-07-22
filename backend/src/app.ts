@@ -56,10 +56,15 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Bind routing modules
+// Bind routing modules (Support both /api/* and /* for bulletproof frontend compatibility)
 app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
+
 app.use('/api/applications', applicationRoutes);
+app.use('/applications', applicationRoutes);
+
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/dashboard', dashboardRoutes);
 
 // Register fallback error handling middleware
 app.use(errorHandler);
