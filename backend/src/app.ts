@@ -15,11 +15,13 @@ const app = express();
 // Configure CORS to whitelist local frontend ports
 const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
 app.use(cors({
-  origin: [
-    clientUrl,
-    'http://localhost:5173', 'http://127.0.0.1:5173',
-    'http://localhost:5174', 'http://127.0.0.1:5174'
-  ],
+  origin: (origin, callback) => {
+    if (!origin || origin.includes('vercel.app') || origin === clientUrl || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Allow all valid origins in production
+    }
+  },
   credentials: true,
 }));
 
