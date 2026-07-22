@@ -28,6 +28,25 @@ app.use(cors({
 // Request parser
 app.use(express.json());
 
+// Root & API Welcome Check
+app.get('/', (req, res) => {
+  return res.json({
+    status: 'ok',
+    message: 'CareerTrack Lite API is running',
+    health: '/api/health',
+    timestamp: new Date(),
+  });
+});
+
+app.get('/api', (req, res) => {
+  return res.json({
+    status: 'ok',
+    message: 'CareerTrack Lite API is running',
+    health: '/api/health',
+    timestamp: new Date(),
+  });
+});
+
 // API Health Check
 app.get('/api/health', (req, res) => {
   return res.json({
