@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const defaultBaseUrl = import.meta.env.PROD ? '/api' : 'http://localhost:5000/api';
+const defaultBaseUrl = import.meta.env.PROD 
+  ? 'https://careertrackbackend.vercel.app/api' 
+  : 'http://localhost:5000/api';
 
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL || defaultBaseUrl,
